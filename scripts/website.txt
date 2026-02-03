@@ -1,0 +1,9 @@
+sudo tee /var/www/html/index.html <<EOF
+<html>
+  <head><title>CCDC Test Site</title></head>
+  <body>
+    <h1>Welcome to our company website</h1>
+    <p>Status: CLEAN</p>
+  </body>
+</html>
+EOF
