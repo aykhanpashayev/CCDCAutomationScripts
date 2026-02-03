@@ -1,182 +1,200 @@
 #!/usr/bin/env bash
-# ============================================================
-# 00_jumpbox_setup.sh
-# SECCDC / CCDC Jump Box Setup (Blue Team Safe)
+# ===============================================================
+# 00_ccdc_jumpbox_setup.sh
 #
-# Purpose:
-#   - Install essential defensive + ops tools on an EMPTY Linux jump box
-#   - Create a clean workspace for notes, outputs, and IR bundles
+# SECCDC / CCDC Jump Box Preparation Script (Blue Team)
 #
-# Safety:
-#   - No offensive tools
-#   - No data exfiltration
-#   - Uses only official OS package repos (apt)
-# ============================================================
+# This script prepares a COMPETITION JUMP BOX.
+# It is NOT a server hardening script.
+#
+# CCDC Context:
+# - Jump boxes are OUT OF SCOPE for Red Team
+# - Jump boxes are NOT scored
+# - Jump boxes are used to:
+#     * Access scored servers (SSH/RDP)
+#     * Check service availability
+#     * Read logs
+#     * Restore content
+#     * Write incident response reports
+#
+# Installing ONLY tools that:
+# - Improve visibility
+# - Improve recovery speed
+# - Improve documentation quality
+#
+# NO offensive tools.
+# NO data exfiltration.
+# NO security agents.
+# ===============================================================
 
 set -Eeuo pipefail
 
-# ----------------------------
-# Pretty output helpers
-# ----------------------------
+# -------------------------------
+# Output formatting (clean & calm)
+# -------------------------------
 GREEN="\033[0;32m"
+BLUE="\033[0;34m"
 YELLOW="\033[0;33m"
 RED="\033[0;31m"
 RESET="\033[0m"
 
-log()  { echo -e "${GREEN}[+]${RESET} $*"; }
-warn() { echo -e "${YELLOW}[!]${RESET} $*"; }
-err()  { echo -e "${RED}[-]${RESET} $*"; }
+info() { echo -e "${BLUE}[INFO]${RESET} $*"; }
+ok()   { echo -e "${GREEN}[ OK ]${RESET} $*"; }
+warn() { echo -e "${YELLOW}[WARN]${RESET} $*"; }
+fail() { echo -e "${RED}[FAIL]${RESET} $*"; }
 
-# ----------------------------
-# Hard checks (friendly)
-# ----------------------------
+# -------------------------------
+# Safety & environment checks
+# -------------------------------
 if [[ "${EUID}" -ne 0 ]]; then
-  err "Please run as root. Example: sudo $0"
+  fail "Run this script with sudo."
+  echo "Example: sudo $0"
   exit 1
 fi
 
 if ! command -v apt >/dev/null 2>&1; then
-  err "This script requires 'apt' (Debian/Ubuntu). Your OS may be different."
-  err "If you're on a different distro, we can make a yum/dnf version."
+  fail "This jump box is not Debian/Ubuntu (apt not found)."
+  fail "CCDC typically uses Ubuntu jump boxes."
   exit 1
 fi
 
-log "Starting Jump Box setup..."
+info "SECCDC Jump Box preparation started."
 
-# ----------------------------
-# Tool list (organized by purpose)
-# ----------------------------
-# Network + service checks:
-PKG_NET=(
-  curl wget
-  iputils-ping
-  netcat-openbsd
-  nmap
-  dnsutils
+# -------------------------------
+# Tool selection (CCDC-driven)
+# -------------------------------
+
+# ---- Service availability & scoring ----
+PKG_SCORING=(
+  curl            # verify HTTP responses exactly like scoring engine
+  iputils-ping    # quick host liveness
+  netcat-openbsd  # port-level service checks (SSH, HTTP, RDP, etc.)
+  nmap            # light service discovery on OWN hosts only
+  dnsutils        # dig/nslookup for DNS scoring
 )
 
-# System visibility:
-PKG_SYS=(
-  htop
-  lsof
-  psmisc
+# ---- System visibility & triage ----
+PKG_VISIBILITY=(
+  htop            # CPU/memory abuse & DoS symptoms
+  lsof            # identify what is holding ports/files
+  psmisc          # killall, pstree (used carefully)
 )
 
-# Logs + parsing:
-PKG_LOG=(
-  lnav
-  jq
+# ---- Logs & incident response ----
+PKG_IR=(
+  lnav            # fast multi-log timeline analysis (huge CCDC advantage)
+  jq              # parse JSON logs/output cleanly
 )
 
-# Backups + file ops:
-PKG_FILE=(
-  rsync
+# ---- Backup & restore (defacement recovery) ----
+PKG_RECOVERY=(
+  rsync           # fast restore of known-good content
   zip unzip
-  tree
+  tree            # detect unauthorized file additions
 )
 
-# Productivity:
-PKG_PROD=(
-  tmux
-  vim
-  nano
+# ---- Operator productivity (chaos control) ----
+PKG_OPS=(
+  tmux            # multiple sessions during attacks
+  vim nano
 )
 
-# Basic certs + HTTPS sanity:
+# ---- Base OS sanity ----
 PKG_BASE=(
   ca-certificates
 )
 
-# Combine all packages:
 ALL_PKGS=(
   "${PKG_BASE[@]}"
-  "${PKG_NET[@]}"
-  "${PKG_SYS[@]}"
-  "${PKG_LOG[@]}"
-  "${PKG_FILE[@]}"
-  "${PKG_PROD[@]}"
+  "${PKG_SCORING[@]}"
+  "${PKG_VISIBILITY[@]}"
+  "${PKG_IR[@]}"
+  "${PKG_RECOVERY[@]}"
+  "${PKG_OPS[@]}"
 )
 
-# ----------------------------
-# Update + Install
-# ----------------------------
-log "Updating package list (apt update)..."
+# -------------------------------
+# Install phase
+# -------------------------------
+info "Updating package index..."
 apt update -y >/dev/null
 
-log "Installing core tools (this may take a minute)..."
-# Show a clean list of what's being installed
-echo "    Packages:"
-for p in "${ALL_PKGS[@]}"; do
-  echo "      - $p"
+info "Installing CCDC-approved toolset:"
+for pkg in "${ALL_PKGS[@]}"; do
+  echo "   - $pkg"
 done
 
-# Install quietly but still show errors if any
 DEBIAN_FRONTEND=noninteractive apt install -y "${ALL_PKGS[@]}" >/dev/null
+ok "Tool installation complete."
 
-log "Tool installation complete."
-
-# ----------------------------
-# Create workspace
-# ----------------------------
-# Use the calling user's home (not /root) so teammates find it easily
-# If run with sudo, SUDO_USER is set; otherwise fallback.
+# -------------------------------
+# Workspace layout (CCDC-oriented)
+# -------------------------------
 TARGET_USER="${SUDO_USER:-root}"
 TARGET_HOME="$(eval echo "~${TARGET_USER}")"
-
 WORKDIR="${TARGET_HOME}/ccdc"
-log "Creating workspace in: ${WORKDIR}"
 
-mkdir -p "${WORKDIR}"/{notes,outputs,ir_bundles,scripts,hosts,templates}
+info "Creating CCDC workspace at ${WORKDIR}"
 
-# Add a quick README inside the workspace
+mkdir -p "${WORKDIR}"/{
+  notes,          # credentials (if allowed), observations, timelines
+  outputs,        # service checks, command outputs
+  ir_bundles,     # evidence collected for IR reports
+  scripts,        # playbook scripts
+  hosts,          # host/IP lists
+  templates       # inject & IR templates
+}
+
 cat > "${WORKDIR}/README.txt" <<'EOF'
-CCDC Workspace
-==============
+CCDC Jump Box Workspace
+======================
 
-notes/       -> quick notes, credentials (ONLY if allowed), observations
-outputs/     -> command outputs, service checks, quick snapshots
-ir_bundles/  -> incident-response evidence bundles (keep internal!)
-hosts/       -> host lists (IP + name)
-scripts/     -> your helper scripts
-templates/   -> incident report & inject templates
+This directory exists ONLY for competition operations.
 
-Reminder:
-- Do NOT upload competition artifacts/logs outside the competition environment.
-- Use tools to check, restore, document, and report.
+notes/        -> observations, timestamps, findings
+outputs/      -> service checks & command output
+ir_bundles/   -> incident response evidence (KEEP INTERNAL)
+hosts/        -> IP/hostname lists for scripts
+scripts/      -> approved blue-team helper scripts
+templates/    -> incident report & inject templates
+
+IMPORTANT:
+- Do NOT upload logs, artifacts, or malware outside the competition.
+- Restore services FIRST, investigate SECOND.
+- Documentation recovers points.
 EOF
 
 chown -R "${TARGET_USER}:${TARGET_USER}" "${WORKDIR}" 2>/dev/null || true
+ok "Workspace ready."
 
-log "Workspace ready."
-
-# ----------------------------
-# Quick verification (non-fancy)
-# ----------------------------
-log "Verifying key tools are available..."
-NEEDED=(curl nc nmap dig htop lnav jq rsync tmux)
+# -------------------------------
+# Verification (confidence check)
+# -------------------------------
+info "Verifying critical tools..."
+REQUIRED=(curl nc nmap dig htop lnav jq rsync tmux)
 missing=0
-for t in "${NEEDED[@]}"; do
-  if ! command -v "${t}" >/dev/null 2>&1; then
-    warn "Missing tool: ${t}"
+
+for tool in "${REQUIRED[@]}"; do
+  if ! command -v "${tool}" >/dev/null 2>&1; then
+    warn "Missing tool: ${tool}"
     missing=1
   fi
 done
 
 if [[ "${missing}" -eq 0 ]]; then
-  log "All key tools found ✅"
+  ok "All required CCDC tools are available."
 else
-  warn "Some tools were missing. Check apt output or rerun install."
+  warn "Some tools are missing — investigate before competition."
 fi
 
-# ----------------------------
-# Friendly next steps
-# ----------------------------
+# -------------------------------
+# CCDC reminders (printed on run)
+# -------------------------------
 echo ""
-log "Done. Next steps:"
-echo "  1) Put your host list in: ${WORKDIR}/hosts/hosts.txt"
-echo "     Format: <ip_or_host> <label>"
-echo "     Example: 10.250.5X.10 frontier"
-echo ""
-echo "  2) Next script we will add: service check + scoreboard sanity"
-echo ""
-warn "Remember: do NOT install tools that record keystrokes/screens or upload samples externally."
+info "CCDC Reminders:"
+echo " - Jump boxes are NOT defended and NOT scored."
+echo " - Do NOT harden or restrict the jump box."
+echo " - Do NOT install tools that upload data externally."
+echo " - Use tools for visibility, restoration, and documentation."
+
+ok "SECCDC Jump Box setup complete."
