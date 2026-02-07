@@ -1,0 +1,7 @@
+'''pwsh -Command "Invoke-Command -ComputerName 10.250.94.10 -ScriptBlock { 
+    Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name 'fDenyTSConnections' -Value 0;
+    Enable-NetFirewallRule -DisplayGroup 'Remote Desktop';
+    Start-Service -Name 'TermService' -Force;
+    Set-Service -Name 'TermService' -StartupType Automatic
+}"
+'''
