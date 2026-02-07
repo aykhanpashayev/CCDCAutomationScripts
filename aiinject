@@ -1,0 +1,29 @@
+Executive Summary
+A comprehensive security review of the internal dental application revealed critical vulnerabilities that could lead to unauthorized administrative access and the exposure of sensitive patient and employee data. The application's reliance on an LLM (Large Language Model) for data processing introduced unique "AI-bypass" vectors that allowed security controls to be circumnavigated.
+
+Critical Vulnerabilities Identified
+1. Union-Based SQL Injection (SQLi)
+Vulnerability: The fields and where parameters in the /care-summary reporting tool were found to be susceptible to SQL injection.
+
+Exploitation: By using UNION SELECT statements, an attacker can extract any data from the backend database, including the users table containing administrative credentials.
+
+Impact: Full credential recovery for administrative accounts, such as Dr. Calamity and Boone Stardust.
+
+2. LLM-Based Content Filter Bypass
+Vulnerability: The application utilizes a "Cowboy AI" persona to summarize database results, which was intended to act as a sanitization layer.
+
+Exploitation: While the AI attempted to mask sensitive data in the front-end summary, it did not filter the underlying raw data.
+
+Impact: By analyzing the raw JSON responses in the browser's Network tab, cleartext passwords were recovered despite the AI's attempt to "cowboy-ify" the output.
+
+3. Metadata Injection
+Vulnerability: Data injected into non-summarized fields (like patient_id or created_at) bypassed the AI's persona logic entirely.
+
+Impact: Sensitive system information was successfully exfiltrated in plain text by placing it in fields the AI agent was not instructed to process.
+
+Remediation Recommendations
+Implement Parameterized Queries: All database interactions must use prepared statements to prevent SQL injection at the root level.
+
+Server-Side Sanitization: Security controls must be implemented in the backend application code, not delegated to an LLM agent.
+
+Data Minimization: Ensure the reporting tool only fetches the specific columns required for the requested report, rather than allowing arbitrary field selection.
