@@ -2,11 +2,9 @@
 set -euo pipefail
 LEN="${1:-16}"
 
-# Packet: passwords permitted alphanumeric and only these specials: )(’.,@|=:;/-!
-# To avoid curly apostrophe issues, we include only ASCII specials from that set.
+# Allowed specials (ASCII-safe): )(.,@|=:;/-!
 ALNUM='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
-SPEC=')(. ,@|=:;/-!'   # space removed below
-SPEC="${SPEC// /}"
+SPEC=")(.,@|=:;/-!"
 
 CHARS="${ALNUM}${SPEC}"
 
