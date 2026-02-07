@@ -1,0 +1,17 @@
+echo 'server {
+    listen 80;
+    server_name localhost;
+    root /usr/share/nginx/html/wordpress;
+    index index.php index.html;
+
+    location / {
+        try_files $uri $uri/ /index.php?$args;
+    }
+
+    location ~ \.php$ {
+        include fastcgi_params;
+        fastcgi_intercept_errors on;
+        fastcgi_pass unix:/run/php-fpm/www.sock;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+    }
+}' | sudo tee /etc/nginx/conf.d/wordpress.conf
